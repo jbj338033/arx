@@ -1,0 +1,23 @@
+[package]
+name = "arx-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Container engine for arx deployment platform"
+repository.workspace = true
+
+[dependencies]
+arx-core.workspace = true
+bollard.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+tar.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+hex.workspace = true
+rand.workspace = true
