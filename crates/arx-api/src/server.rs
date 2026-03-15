@@ -75,11 +75,11 @@ pub fn create_router(state: AppState) -> Router {
         .route("/projects/{id}/diff", get(routes::deployment_diff))
         .route("/claim/{token}", post(routes::claim_deployment))
         .with_state(state.clone())
-        .layer(axum::Extension(rate_limiter))
-        .layer(axum::Extension(pool))
         .route_layer(middleware::from_fn(idempotency_middleware))
         .route_layer(middleware::from_fn(rate_limit_middleware))
-        .route_layer(middleware::from_fn(auth_middleware));
+        .route_layer(middleware::from_fn(auth_middleware))
+        .layer(axum::Extension(rate_limiter))
+        .layer(axum::Extension(pool));
 
     let public = Router::new()
         .route("/health", get(routes::health))
