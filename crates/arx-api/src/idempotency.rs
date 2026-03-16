@@ -39,14 +39,11 @@ pub async fn idempotency_middleware(req: Request, next: Next) -> Response {
 
     let path = req.uri().path().to_string();
 
-    if let Ok(Some((status_code, body))) = db::get_idempotency_key(&pool, &idem_key, &api_key_id).await {
+    if let Ok(Some((status_code, body))) =
+        db::get_idempotency_key(&pool, &idem_key, &api_key_id).await
+    {
         let status = StatusCode::from_u16(status_code as u16).unwrap_or(StatusCode::OK);
-        return (
-            status,
-            [("content-type", "application/json")],
-            body,
-        )
-            .into_response();
+        return (status, [("content-type", "application/json")], body).into_response();
     }
 
     let resp = next.run(req).await;

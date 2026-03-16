@@ -39,9 +39,7 @@ impl BuildEngine {
             ..Default::default()
         };
 
-        let mut stream = self
-            .docker
-            .build_image(options, None, Some(tar.into()));
+        let mut stream = self.docker.build_image(options, None, Some(tar.into()));
 
         let mut last_error = None;
 
@@ -65,7 +63,10 @@ impl BuildEngine {
         }
 
         if let Some(err) = last_error {
-            return Err(Error::BuildFailed(parse_build_error(&err, BuildPhase::Build)));
+            return Err(Error::BuildFailed(parse_build_error(
+                &err,
+                BuildPhase::Build,
+            )));
         }
 
         Ok(image_tag.to_string())

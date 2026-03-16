@@ -1,6 +1,6 @@
 use arx_core::client::ArxClient;
 use arx_core::error::Error;
-use arx_core::output::{OutputMode, print_error};
+use arx_core::output::{print_error, OutputMode};
 use clap::{Parser, Subcommand};
 
 #[cfg(unix)]
@@ -119,8 +119,12 @@ enum ProjectCommands {
         repo: Option<String>,
     },
     List,
-    Info { name: String },
-    Delete { name: String },
+    Info {
+        name: String,
+    },
+    Delete {
+        name: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -157,7 +161,9 @@ enum AuthCommands {
         ttl: Option<i64>,
     },
     List,
-    Revoke { id: String },
+    Revoke {
+        id: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -336,8 +342,14 @@ async fn run_client_command(
         }
 
         Commands::Db { command } => match command {
-            DbCommands::Create { engine, project, name } => {
-                let result = client.create_database(&project, &engine, name.as_deref()).await?;
+            DbCommands::Create {
+                engine,
+                project,
+                name,
+            } => {
+                let result = client
+                    .create_database(&project, &engine, name.as_deref())
+                    .await?;
                 print_json(output, &result);
             }
             DbCommands::List { project } => {
@@ -453,8 +465,7 @@ async fn ensure_initial_admin_key(pool: &sqlx::SqlitePool) -> Result<(), Error> 
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                let _ =
-                    std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o600));
+                let _ = std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o600));
             }
             tracing::info!("initial admin key written to {}", key_path.display());
         }
@@ -518,10 +529,7 @@ async fn run_admin(command: AdminCommands) -> Result<(), Error> {
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                let _ = std::fs::set_permissions(
-                    key_path,
-                    std::fs::Permissions::from_mode(0o600),
-                );
+                let _ = std::fs::set_permissions(key_path, std::fs::Permissions::from_mode(0o600));
             }
 
             println!("{raw_key}");
@@ -539,16 +547,34 @@ async fn run_doctor() -> Result<(), Error> {
         Ok(d) => d.ping().await.is_ok(),
         Err(_) => false,
     };
-    checks.push(("docker daemon", docker_ok, if docker_ok { "connected".into() } else { "cannot connect to docker".into() }));
+    checks.push((
+        "docker daemon",
+        docker_ok,
+        if docker_ok {
+            "connected".into()
+        } else {
+            "cannot connect to docker".into()
+        },
+    ));
 
     let pool = arx_core::db::connect(&db_path).await;
     let db_ok = pool.is_ok();
-    checks.push(("sqlite database", db_ok, if db_ok { format!("ok ({db_path})") } else { format!("cannot open {db_path}") }));
+    checks.push((
+        "sqlite database",
+        db_ok,
+        if db_ok {
+            format!("ok ({db_path})")
+        } else {
+            format!("cannot open {db_path}")
+        },
+    ));
 
     let key_path = std::path::Path::new("/etc/arx/master.key");
     let key_ok = key_path.exists();
     let key_msg = if key_ok {
-        let perms = std::fs::metadata(key_path).map(|m| format!("{:o}", m.permissions().mode())).unwrap_or_default();
+        let perms = std::fs::metadata(key_path)
+            .map(|m| format!("{:o}", m.permissions().mode()))
+            .unwrap_or_default();
         format!("exists (mode: {perms})")
     } else {
         "missing".into()
@@ -561,7 +587,17 @@ async fn run_doctor() -> Result<(), Error> {
     } else {
         false
     };
-    checks.push(("caddy proxy", caddy_ok || caddy_url.is_err(), if caddy_url.is_err() { "not configured (optional)".into() } else if caddy_ok { "connected".into() } else { "configured but unreachable".into() }));
+    checks.push((
+        "caddy proxy",
+        caddy_ok || caddy_url.is_err(),
+        if caddy_url.is_err() {
+            "not configured (optional)".into()
+        } else if caddy_ok {
+            "connected".into()
+        } else {
+            "configured but unreachable".into()
+        },
+    ));
 
     if let Ok(ref pool) = pool {
         let failed = sqlx::query_as::<_, (String, String, String)>(
@@ -574,17 +610,28 @@ async fn run_doctor() -> Result<(), Error> {
         if failed.is_empty() {
             checks.push(("recent failures", true, "none".into()));
         } else {
-            let msg = failed.iter().map(|(id, pid, ts)| format!("{} (project: {}, at: {})", &id[..8], &pid[..8], ts)).collect::<Vec<_>>().join(", ");
+            let msg = failed
+                .iter()
+                .map(|(id, pid, ts)| format!("{} (project: {}, at: {})", &id[..8], &pid[..8], ts))
+                .collect::<Vec<_>>()
+                .join(", ");
             checks.push(("recent failures", false, msg));
         }
 
         if docker_ok {
             let docker = bollard::Docker::connect_with_local_defaults().unwrap();
-            let containers = docker.list_containers::<String>(Some(bollard::container::ListContainersOptions {
-                filters: std::collections::HashMap::from([("name".into(), vec!["arx-".into()])]),
-                ..Default::default()
-            })).await.unwrap_or_default();
-            let running_ids: std::collections::HashSet<String> = containers.iter().filter_map(|c| c.id.clone()).collect();
+            let containers = docker
+                .list_containers::<String>(Some(bollard::container::ListContainersOptions {
+                    filters: std::collections::HashMap::from([(
+                        "name".into(),
+                        vec!["arx-".into()],
+                    )]),
+                    ..Default::default()
+                }))
+                .await
+                .unwrap_or_default();
+            let running_ids: std::collections::HashSet<String> =
+                containers.iter().filter_map(|c| c.id.clone()).collect();
 
             let db_containers = sqlx::query_as::<_, (String,)>(
                 "SELECT container_id FROM deployments WHERE container_id IS NOT NULL AND status = 'live'"
@@ -592,7 +639,8 @@ async fn run_doctor() -> Result<(), Error> {
             .fetch_all(pool)
             .await
             .unwrap_or_default();
-            let db_ids: std::collections::HashSet<String> = db_containers.into_iter().map(|r| r.0).collect();
+            let db_ids: std::collections::HashSet<String> =
+                db_containers.into_iter().map(|r| r.0).collect();
 
             let orphaned = running_ids.difference(&db_ids).count();
             let missing = db_ids.difference(&running_ids).count();
@@ -625,9 +673,10 @@ async fn run_doctor() -> Result<(), Error> {
 
 async fn run_login(url: &str, key: &str, name: Option<&str>) -> Result<(), Error> {
     let client = ArxClient::new(url, key)?;
-    client.health().await.map_err(|_| {
-        Error::Internal(format!("cannot connect to {url}, check url and key"))
-    })?;
+    client
+        .health()
+        .await
+        .map_err(|_| Error::Internal(format!("cannot connect to {url}, check url and key")))?;
 
     let server_name = name.unwrap_or("default").to_string();
     let config_dir = config_dir();

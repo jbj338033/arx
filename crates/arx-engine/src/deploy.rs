@@ -27,13 +27,13 @@ impl DeployEngine {
         env: Vec<String>,
         config: &ArxConfig,
     ) -> Result<DeployResult, Error> {
-        let image_tag = format!("arx-build-{}-{}", deployment.project_id, &deployment.id[..8]);
+        let image_tag = format!(
+            "arx-build-{}-{}",
+            deployment.project_id,
+            &deployment.id[..8]
+        );
 
-        let dockerfile = config
-            .build
-            .dockerfile
-            .as_deref()
-            .unwrap_or("Dockerfile");
+        let dockerfile = config.build.dockerfile.as_deref().unwrap_or("Dockerfile");
 
         self.builder
             .build_dockerfile(context_path, dockerfile, &image_tag)

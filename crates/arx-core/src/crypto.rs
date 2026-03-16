@@ -12,8 +12,7 @@ pub fn load_master_key(path: &str) -> Result<Vec<u8>, Error> {
         .map_err(|e| Error::Internal(format!("failed to read master key from {path}: {e}")))?;
     let trimmed = String::from_utf8_lossy(&bytes);
     let trimmed = trimmed.trim();
-    hex::decode(trimmed)
-        .map_err(|e| Error::Internal(format!("invalid master key hex: {e}")))
+    hex::decode(trimmed).map_err(|e| Error::Internal(format!("invalid master key hex: {e}")))
 }
 
 pub fn encrypt(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, Error> {

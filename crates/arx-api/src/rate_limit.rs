@@ -36,10 +36,7 @@ impl RateLimiter {
 }
 
 pub async fn rate_limit_middleware(req: Request, next: Next) -> Response {
-    let limiter = req
-        .extensions()
-        .get::<RateLimiter>()
-        .cloned();
+    let limiter = req.extensions().get::<RateLimiter>().cloned();
 
     let limiter = match limiter {
         Some(l) => l,
@@ -62,7 +59,10 @@ pub async fn rate_limit_middleware(req: Request, next: Next) -> Response {
     let mut windows = limiter.windows.lock().await;
     let timestamps = windows.entry(key_id).or_default();
 
-    while timestamps.front().is_some_and(|t| now.duration_since(*t) > window) {
+    while timestamps
+        .front()
+        .is_some_and(|t| now.duration_since(*t) > window)
+    {
         timestamps.pop_front();
     }
 

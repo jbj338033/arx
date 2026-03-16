@@ -11,8 +11,7 @@ use arx_api::server::{create_router, AppState};
 use arx_core::model::ApiScope;
 
 // 32-byte test master key (AES-256-GCM requires 32 bytes)
-const TEST_MASTER_KEY: &str =
-    "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20";
+const TEST_MASTER_KEY: &str = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20";
 
 struct TestEnv {
     client: Client,
@@ -95,11 +94,7 @@ impl TestEnv {
     }
 }
 
-async fn insert_api_key(
-    pool: &sqlx::SqlitePool,
-    name: &str,
-    scope: ApiScope,
-) -> String {
+async fn insert_api_key(pool: &sqlx::SqlitePool, name: &str, scope: ApiScope) -> String {
     let raw = arx_api::auth::generate_api_key();
     let hash = arx_api::auth::hash_key(&raw);
     let key = arx_core::model::ApiKey {
@@ -132,9 +127,8 @@ async fn setup() -> TestEnv {
     let deploy_key = insert_api_key(&pool, "test-deploy", ApiScope::Deploy).await;
     let read_key = insert_api_key(&pool, "test-read", ApiScope::Read).await;
 
-    let engine = Arc::new(
-        arx_engine::deploy::DeployEngine::new().expect("deploy engine init failed"),
-    );
+    let engine =
+        Arc::new(arx_engine::deploy::DeployEngine::new().expect("deploy engine init failed"));
 
     let state = AppState {
         pool,
@@ -224,7 +218,11 @@ async fn auth_unknown_token() {
 async fn read_key_cannot_create_project() {
     let env = setup().await;
     let res = env
-        .post("/projects", &env.read_key.clone(), json!({"name": "forbidden"}))
+        .post(
+            "/projects",
+            &env.read_key.clone(),
+            json!({"name": "forbidden"}),
+        )
         .await;
     assert_eq!(res.status(), 403);
 }
@@ -234,14 +232,20 @@ async fn deploy_key_cannot_delete_project() {
     let env = setup().await;
     // create a project first with admin
     let created = env
-        .post("/projects", &env.admin_key.clone(), json!({"name": "scope-test"}))
+        .post(
+            "/projects",
+            &env.admin_key.clone(),
+            json!({"name": "scope-test"}),
+        )
         .await
         .json::<Value>()
         .await
         .unwrap();
     let id = created["id"].as_str().unwrap();
 
-    let res = env.delete(&format!("/projects/{id}"), &env.deploy_key.clone()).await;
+    let res = env
+        .delete(&format!("/projects/{id}"), &env.deploy_key.clone())
+        .await;
     assert_eq!(res.status(), 403);
 }
 
@@ -424,13 +428,17 @@ async fn deployment_claim() {
     let token = dep["claim_token"].as_str().unwrap();
 
     // claim it
-    let res = env.post(&format!("/claim/{token}"), &admin, json!({})).await;
+    let res = env
+        .post(&format!("/claim/{token}"), &admin, json!({}))
+        .await;
     assert_eq!(res.status(), 200);
     let claimed: Value = res.json().await.unwrap();
     assert_eq!(claimed["status"], "claimed");
 
     // claiming again should conflict
-    let res2 = env.post(&format!("/claim/{token}"), &admin, json!({})).await;
+    let res2 = env
+        .post(&format!("/claim/{token}"), &admin, json!({}))
+        .await;
     assert_eq!(res2.status(), 409);
 }
 
@@ -521,12 +529,7 @@ async fn api_key_create_list_revoke() {
     let key_id = body["id"].as_str().unwrap().to_string();
 
     // list
-    let list: Value = env
-        .get("/auth/keys", &admin)
-        .await
-        .json()
-        .await
-        .unwrap();
+    let list: Value = env.get("/auth/keys", &admin).await.json().await.unwrap();
     let arr = list.as_array().unwrap();
     assert!(arr.iter().any(|k| k["id"] == key_id));
 
@@ -756,23 +759,13 @@ async fn idempotency_same_key_returns_same_response() {
     let ikey = uuid::Uuid::new_v4().to_string();
 
     let r1 = env
-        .post_with_idempotency(
-            "/projects",
-            &admin,
-            json!({"name": "idem-proj"}),
-            &ikey,
-        )
+        .post_with_idempotency("/projects", &admin, json!({"name": "idem-proj"}), &ikey)
         .await;
     assert_eq!(r1.status(), 201);
     let b1: Value = r1.json().await.unwrap();
 
     let r2 = env
-        .post_with_idempotency(
-            "/projects",
-            &admin,
-            json!({"name": "idem-proj"}),
-            &ikey,
-        )
+        .post_with_idempotency("/projects", &admin, json!({"name": "idem-proj"}), &ikey)
         .await;
     assert_eq!(r2.status(), 201);
     let b2: Value = r2.json().await.unwrap();

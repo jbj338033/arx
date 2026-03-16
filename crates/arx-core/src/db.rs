@@ -16,13 +16,13 @@ pub async fn connect(db_path: &str) -> Result<SqlitePool, Error> {
         .connect_with(options)
         .await?;
 
-    sqlx::migrate!("../../migrations").run(&pool).await.map_err(|e| {
-        Error::Internal(format!("migration failed: {e}"))
-    })?;
+    sqlx::migrate!("../../migrations")
+        .run(&pool)
+        .await
+        .map_err(|e| Error::Internal(format!("migration failed: {e}")))?;
 
     Ok(pool)
 }
-
 
 pub async fn create_project(pool: &SqlitePool, project: &Project) -> Result<(), Error> {
     sqlx::query(
@@ -139,7 +139,6 @@ pub async fn update_project_production(
     Ok(())
 }
 
-
 pub async fn create_deployment(pool: &SqlitePool, deployment: &Deployment) -> Result<(), Error> {
     sqlx::query(
         "INSERT INTO deployments (id, project_id, status, source, git_ref, git_sha, image_ref, log_path, claim_token, claimed_by, created_at, updated_at)
@@ -234,7 +233,6 @@ pub async fn update_deployment_verification(
     Ok(())
 }
 
-
 pub async fn create_api_key(pool: &SqlitePool, key: &ApiKey) -> Result<(), Error> {
     sqlx::query(
         "INSERT INTO api_keys (id, name, key_hash, key_prefix, scope, allowed_ips, expires_at, created_at)
@@ -291,7 +289,6 @@ pub async fn touch_api_key(pool: &SqlitePool, id: &str) -> Result<(), Error> {
     Ok(())
 }
 
-
 pub async fn create_audit_log(pool: &SqlitePool, log: &AuditLog) -> Result<(), Error> {
     sqlx::query(
         "INSERT INTO audit_logs (id, api_key_id, action, resource, ip, timestamp)
@@ -345,7 +342,6 @@ pub async fn list_audit_logs(
     Ok(rows.into_iter().map(Into::into).collect())
 }
 
-
 pub async fn create_domain(pool: &SqlitePool, domain: &Domain) -> Result<(), Error> {
     sqlx::query(
         "INSERT INTO domains (id, project_id, domain, is_verified, created_at)
@@ -389,7 +385,6 @@ pub async fn delete_domain(pool: &SqlitePool, id: &str) -> Result<(), Error> {
         .await?;
     Ok(())
 }
-
 
 pub async fn set_env_var(
     pool: &SqlitePool,
@@ -446,7 +441,6 @@ pub async fn get_project_by_repo_url(pool: &SqlitePool, repo_url: &str) -> Resul
     .ok_or_else(|| Error::ProjectNotFound(repo_url.into()))
 }
 
-
 pub async fn get_idempotency_key(
     pool: &SqlitePool,
     key: &str,
@@ -493,7 +487,6 @@ pub async fn cleanup_idempotency_keys(pool: &SqlitePool) -> Result<(), Error> {
     Ok(())
 }
 
-
 pub async fn create_managed_database(pool: &SqlitePool, db: &ManagedDatabase) -> Result<(), Error> {
     sqlx::query(
         "INSERT INTO managed_databases (id, project_id, engine, container_id, host, port, database_name, username, password_encrypted, status, created_at)
@@ -527,7 +520,10 @@ pub async fn get_managed_database(pool: &SqlitePool, id: &str) -> Result<Managed
     .ok_or_else(|| Error::Internal(format!("database not found: {id}")))
 }
 
-pub async fn list_managed_databases(pool: &SqlitePool, project_id: &str) -> Result<Vec<ManagedDatabase>, Error> {
+pub async fn list_managed_databases(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> Result<Vec<ManagedDatabase>, Error> {
     let rows = sqlx::query_as::<_, ManagedDatabaseRow>(
         "SELECT id, project_id, engine, container_id, host, port, database_name, username, password_encrypted, status, created_at
          FROM managed_databases WHERE project_id = ? ORDER BY created_at DESC",
@@ -553,7 +549,10 @@ pub async fn update_managed_database_status(
     Ok(())
 }
 
-pub async fn delete_managed_database(pool: &SqlitePool, id: &str) -> Result<ManagedDatabase, Error> {
+pub async fn delete_managed_database(
+    pool: &SqlitePool,
+    id: &str,
+) -> Result<ManagedDatabase, Error> {
     let db = get_managed_database(pool, id).await?;
     sqlx::query("DELETE FROM managed_databases WHERE id = ?")
         .bind(id)
@@ -561,7 +560,6 @@ pub async fn delete_managed_database(pool: &SqlitePool, id: &str) -> Result<Mana
         .await?;
     Ok(db)
 }
-
 
 pub async fn create_deploy_hook(pool: &SqlitePool, hook: &DeployHook) -> Result<(), Error> {
     sqlx::query(
@@ -579,7 +577,10 @@ pub async fn create_deploy_hook(pool: &SqlitePool, hook: &DeployHook) -> Result<
     Ok(())
 }
 
-pub async fn list_deploy_hooks(pool: &SqlitePool, project_id: &str) -> Result<Vec<DeployHook>, Error> {
+pub async fn list_deploy_hooks(
+    pool: &SqlitePool,
+    project_id: &str,
+) -> Result<Vec<DeployHook>, Error> {
     let rows = sqlx::query_as::<_, DeployHookRow>(
         "SELECT id, project_id, url, events, secret, created_at FROM deploy_hooks WHERE project_id = ? ORDER BY created_at",
     )
@@ -600,8 +601,10 @@ pub async fn delete_deploy_hook(pool: &SqlitePool, id: &str) -> Result<(), Error
     Ok(())
 }
 
-
-pub async fn get_deployment_by_claim_token(pool: &SqlitePool, token: &str) -> Result<Deployment, Error> {
+pub async fn get_deployment_by_claim_token(
+    pool: &SqlitePool,
+    token: &str,
+) -> Result<Deployment, Error> {
     sqlx::query_as::<_, DeploymentRow>(
         "SELECT id, project_id, status, source, git_ref, git_sha, image_ref, container_id, url, verification_result, log_path, claim_token, claimed_by, created_at, updated_at
          FROM deployments WHERE claim_token = ?",
@@ -614,7 +617,11 @@ pub async fn get_deployment_by_claim_token(pool: &SqlitePool, token: &str) -> Re
     .ok_or_else(|| Error::DeploymentNotFound(token.into()))
 }
 
-pub async fn claim_deployment(pool: &SqlitePool, token: &str, claimed_by: &str) -> Result<(), Error> {
+pub async fn claim_deployment(
+    pool: &SqlitePool,
+    token: &str,
+    claimed_by: &str,
+) -> Result<(), Error> {
     sqlx::query("UPDATE deployments SET claimed_by = ?, updated_at = datetime('now') WHERE claim_token = ? AND claimed_by IS NULL")
         .bind(claimed_by)
         .bind(token)
@@ -628,7 +635,6 @@ pub async fn claim_deployment(pool: &SqlitePool, token: &str, claimed_by: &str) 
             }
         })?
 }
-
 
 #[derive(sqlx::FromRow)]
 struct ProjectRow {
@@ -886,8 +892,7 @@ fn parse_dt(s: &str) -> chrono::DateTime<chrono::Utc> {
     chrono::DateTime::parse_from_rfc3339(s)
         .map(|dt| dt.with_timezone(&chrono::Utc))
         .or_else(|_| {
-            chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
-                .map(|ndt| ndt.and_utc())
+            chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S").map(|ndt| ndt.and_utc())
         })
         .unwrap_or_default()
 }
