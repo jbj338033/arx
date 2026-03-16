@@ -34,10 +34,9 @@ impl ArxClient {
             .ok_or_else(|| Error::Internal("not logged in, run `arx login` first".into()))?;
 
         let sc = if let Some(name) = server {
-            creds
-                .servers
-                .get(name)
-                .ok_or_else(|| Error::Internal(format!("server '{name}' not found in credentials")))?
+            creds.servers.get(name).ok_or_else(|| {
+                Error::Internal(format!("server '{name}' not found in credentials"))
+            })?
         } else {
             creds
                 .active_server()
@@ -68,12 +67,7 @@ impl ArxClient {
         Ok(body)
     }
 
-
-    pub async fn create_project(
-        &self,
-        name: &str,
-        repo_url: Option<&str>,
-    ) -> Result<Value, Error> {
+    pub async fn create_project(&self, name: &str, repo_url: Option<&str>) -> Result<Value, Error> {
         let mut body = serde_json::json!({"name": name});
         if let Some(url) = repo_url {
             body["repo_url"] = Value::String(url.into());
@@ -117,18 +111,16 @@ impl ArxClient {
             .map_err(|e| Error::Internal(e.to_string()))?;
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or_default();
-            let msg = body["error"].as_str().unwrap_or("delete failed").to_string();
+            let msg = body["error"]
+                .as_str()
+                .unwrap_or("delete failed")
+                .to_string();
             return Err(Error::Internal(msg));
         }
         Ok(())
     }
 
-
-    pub async fn deploy_image(
-        &self,
-        project_id: &str,
-        image: &str,
-    ) -> Result<Value, Error> {
+    pub async fn deploy_image(&self, project_id: &str, image: &str) -> Result<Value, Error> {
         let body = serde_json::json!({"image_ref": image});
         let resp = self
             .http
@@ -166,11 +158,7 @@ impl ArxClient {
         self.handle_response(resp).await
     }
 
-    pub async fn rollback(
-        &self,
-        project_id: &str,
-        deployment_id: &str,
-    ) -> Result<Value, Error> {
+    pub async fn rollback(&self, project_id: &str, deployment_id: &str) -> Result<Value, Error> {
         let resp = self
             .http
             .post(self.url(&format!(
@@ -181,7 +169,6 @@ impl ArxClient {
             .map_err(|e| Error::Internal(e.to_string()))?;
         self.handle_response(resp).await
     }
-
 
     pub async fn add_domain(&self, project_id: &str, domain: &str) -> Result<Value, Error> {
         let body = serde_json::json!({"domain": domain});
@@ -217,7 +204,6 @@ impl ArxClient {
         }
         Ok(())
     }
-
 
     pub async fn create_api_key(
         &self,
@@ -263,7 +249,6 @@ impl ArxClient {
         Ok(())
     }
 
-
     pub async fn set_env_var(
         &self,
         project_id: &str,
@@ -300,12 +285,14 @@ impl ArxClient {
             .map_err(|e| Error::Internal(e.to_string()))?;
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or_default();
-            let msg = body["error"].as_str().unwrap_or("delete failed").to_string();
+            let msg = body["error"]
+                .as_str()
+                .unwrap_or("delete failed")
+                .to_string();
             return Err(Error::Internal(msg));
         }
         Ok(())
     }
-
 
     pub async fn stream_logs(&self, project_id: &str, deployment_id: &str) -> Result<(), Error> {
         let resp = self
@@ -337,7 +324,6 @@ impl ArxClient {
         Ok(())
     }
 
-
     pub async fn list_audit_logs(&self) -> Result<Value, Error> {
         let resp = self
             .http
@@ -347,7 +333,6 @@ impl ArxClient {
             .map_err(|e| Error::Internal(e.to_string()))?;
         self.handle_response(resp).await
     }
-
 
     pub async fn create_database(
         &self,
@@ -388,12 +373,14 @@ impl ArxClient {
             .map_err(|e| Error::Internal(e.to_string()))?;
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or_default();
-            let msg = body["error"].as_str().unwrap_or("delete failed").to_string();
+            let msg = body["error"]
+                .as_str()
+                .unwrap_or("delete failed")
+                .to_string();
             return Err(Error::Internal(msg));
         }
         Ok(())
     }
-
 
     pub async fn create_deploy_hook(
         &self,
@@ -442,7 +429,6 @@ impl ArxClient {
         Ok(())
     }
 
-
     pub async fn deployment_diff(
         &self,
         project_id: &str,
@@ -451,15 +437,12 @@ impl ArxClient {
     ) -> Result<Value, Error> {
         let resp = self
             .http
-            .get(self.url(&format!(
-                "/projects/{project_id}/diff?from={from}&to={to}"
-            )))
+            .get(self.url(&format!("/projects/{project_id}/diff?from={from}&to={to}")))
             .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))?;
         self.handle_response(resp).await
     }
-
 
     pub async fn health(&self) -> Result<Value, Error> {
         let resp = self

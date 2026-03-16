@@ -55,20 +55,37 @@ pub async fn github_webhook(
     let signature = headers
         .get("x-hub-signature-256")
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| (StatusCode::BAD_REQUEST, Json(json!({"error": "missing signature"}))))?;
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "missing signature"})),
+            )
+        })?;
 
     let secret = std::env::var("ARX_WEBHOOK_SECRET").unwrap_or_default();
     if !verify_signature(secret.as_bytes(), &body, signature) {
-        return Err((StatusCode::UNAUTHORIZED, Json(json!({"error": "invalid signature"}))));
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "invalid signature"})),
+        ));
     }
 
-    let payload: GithubPayload = serde_json::from_slice(&body)
-        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({"error": format!("invalid payload: {e}")}))))?;
+    let payload: GithubPayload = serde_json::from_slice(&body).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("invalid payload: {e}")})),
+        )
+    })?;
 
     let repo = payload.repository.as_ref();
     let repo_url = repo
         .and_then(|r| r.clone_url.as_deref().or(r.html_url.as_deref()))
-        .ok_or_else(|| (StatusCode::BAD_REQUEST, Json(json!({"error": "missing repository url"}))))?;
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "missing repository url"})),
+            )
+        })?;
 
     let git_ref = payload.git_ref.as_deref();
     let git_sha = payload
@@ -106,20 +123,37 @@ pub async fn gitea_webhook(
         .get("x-gitea-signature")
         .or_else(|| headers.get("x-hub-signature-256"))
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| (StatusCode::BAD_REQUEST, Json(json!({"error": "missing signature"}))))?;
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "missing signature"})),
+            )
+        })?;
 
     let secret = std::env::var("ARX_WEBHOOK_SECRET").unwrap_or_default();
     if !verify_signature(secret.as_bytes(), &body, signature) {
-        return Err((StatusCode::UNAUTHORIZED, Json(json!({"error": "invalid signature"}))));
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "invalid signature"})),
+        ));
     }
 
-    let payload: GiteaPayload = serde_json::from_slice(&body)
-        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({"error": format!("invalid payload: {e}")}))))?;
+    let payload: GiteaPayload = serde_json::from_slice(&body).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("invalid payload: {e}")})),
+        )
+    })?;
 
     let repo = payload.repository.as_ref();
     let repo_url = repo
         .and_then(|r| r.clone_url.as_deref().or(r.html_url.as_deref()))
-        .ok_or_else(|| (StatusCode::BAD_REQUEST, Json(json!({"error": "missing repository url"}))))?;
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "missing repository url"})),
+            )
+        })?;
 
     let git_ref = payload.git_ref.as_deref();
     let git_sha = payload.after.as_deref();
@@ -139,11 +173,18 @@ async fn trigger_deployment(
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let project = db::get_project_by_repo_url(&state.pool, repo_url)
         .await
-        .map_err(|_| (StatusCode::NOT_FOUND, Json(json!({"error": "no project matches this repository"}))))?;
+        .map_err(|_| {
+            (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "no project matches this repository"})),
+            )
+        })?;
 
     let default_branch = project.default_branch.as_deref().unwrap_or("main");
     if branch != default_branch {
-        return Ok(Json(json!({"status": "skipped", "reason": "branch does not match"})));
+        return Ok(Json(
+            json!({"status": "skipped", "reason": "branch does not match"}),
+        ));
     }
 
     let deployment = Deployment {
@@ -166,7 +207,12 @@ async fn trigger_deployment(
 
     db::create_deployment(&state.pool, &deployment)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        })?;
 
     Ok(Json(json!({
         "status": "triggered",

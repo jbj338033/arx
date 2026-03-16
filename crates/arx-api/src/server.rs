@@ -29,7 +29,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/projects/{id}", get(routes::get_project))
         .route("/projects/{id}", patch(routes::update_project))
         .route("/projects/{id}", delete(routes::delete_project))
-        .route("/projects/{id}/deployments", post(routes::create_deployment))
+        .route(
+            "/projects/{id}/deployments",
+            post(routes::create_deployment),
+        )
         .route("/projects/{id}/deployments", get(routes::list_deployments))
         .route(
             "/projects/{id}/deployments/{did}",
@@ -114,7 +117,12 @@ pub async fn run(pool: SqlitePool, host: &str, port: u16) -> Result<(), arx_core
     };
 
     let rate_limiter = RateLimiter::new();
-    let state = AppState { pool: pool.clone(), engine, caddy, rate_limiter };
+    let state = AppState {
+        pool: pool.clone(),
+        engine,
+        caddy,
+        rate_limiter,
+    };
 
     let cleanup_pool = pool.clone();
     tokio::spawn(async move {

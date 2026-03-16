@@ -1,6 +1,6 @@
 use bollard::container::{
-    Config, CreateContainerOptions, RemoveContainerOptions,
-    StartContainerOptions, StopContainerOptions,
+    Config, CreateContainerOptions, RemoveContainerOptions, StartContainerOptions,
+    StopContainerOptions,
 };
 use bollard::image::CreateImageOptions;
 use bollard::models::HostConfig;
@@ -38,6 +38,7 @@ impl ContainerManager {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_and_start(
         &self,
         name: &str,
@@ -82,7 +83,10 @@ impl ContainerManager {
             ..Default::default()
         };
 
-        let opts = CreateContainerOptions { name, platform: None };
+        let opts = CreateContainerOptions {
+            name,
+            platform: None,
+        };
 
         let response = self
             .docker
@@ -146,11 +150,7 @@ impl ContainerManager {
         self.docker
             .inspect_container(container_id, None)
             .await
-            .map(|info| {
-                info.state
-                    .and_then(|s| s.running)
-                    .unwrap_or(false)
-            })
+            .map(|info| info.state.and_then(|s| s.running).unwrap_or(false))
             .unwrap_or(false)
     }
 

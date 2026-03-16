@@ -9,7 +9,6 @@ use arx_engine::deploy::DeployEngine;
 
 #[derive(Deserialize)]
 struct JsonRpcRequest {
-    jsonrpc: String,
     id: Option<Value>,
     method: String,
     #[serde(default)]
@@ -184,9 +183,7 @@ async fn call_tool(pool: &SqlitePool, name: &str, args: &Value) -> Result<Value,
         }
 
         "deploy_image" => {
-            let project_id = args["project_id"]
-                .as_str()
-                .ok_or("missing project_id")?;
+            let project_id = args["project_id"].as_str().ok_or("missing project_id")?;
             let image = args["image"].as_str().ok_or("missing image")?;
 
             let deployment = arx_core::model::Deployment {
@@ -219,14 +216,22 @@ async fn call_tool(pool: &SqlitePool, name: &str, args: &Value) -> Result<Value,
         }
 
         "get_deployment_status" => {
-            let did = args["deployment_id"].as_str().ok_or("missing deployment_id")?;
-            let dep = db::get_deployment(pool, did).await.map_err(|e| e.to_string())?;
+            let did = args["deployment_id"]
+                .as_str()
+                .ok_or("missing deployment_id")?;
+            let dep = db::get_deployment(pool, did)
+                .await
+                .map_err(|e| e.to_string())?;
             Ok(json!(dep))
         }
 
         "get_logs" => {
-            let did = args["deployment_id"].as_str().ok_or("missing deployment_id")?;
-            let dep = db::get_deployment(pool, did).await.map_err(|e| e.to_string())?;
+            let did = args["deployment_id"]
+                .as_str()
+                .ok_or("missing deployment_id")?;
+            let dep = db::get_deployment(pool, did)
+                .await
+                .map_err(|e| e.to_string())?;
 
             let logs = if let Some(path) = &dep.log_path {
                 std::fs::read_to_string(path).unwrap_or_else(|_| "no logs available".into())
@@ -275,9 +280,7 @@ async fn call_tool(pool: &SqlitePool, name: &str, args: &Value) -> Result<Value,
             }))
         }
 
-        "set_env_vars" => {
-            Ok(json!({"message": "env vars set (encryption not configured)"}))
-        }
+        "set_env_vars" => Ok(json!({"message": "env vars set (encryption not configured)"})),
 
         _ => Err(format!("unknown tool: {name}")),
     }

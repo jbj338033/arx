@@ -14,11 +14,7 @@ impl CaddyClient {
         }
     }
 
-    pub async fn add_route(
-        &self,
-        domain: &str,
-        upstream: &str,
-    ) -> Result<(), Error> {
+    pub async fn add_route(&self, domain: &str, upstream: &str) -> Result<(), Error> {
         let route = json!({
             "@id": format!("arx-{domain}"),
             "match": [{"host": [domain]}],
@@ -56,16 +52,14 @@ impl CaddyClient {
 
         if !resp.status().is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(Error::Internal(format!("caddy route remove failed: {body}")));
+            return Err(Error::Internal(format!(
+                "caddy route remove failed: {body}"
+            )));
         }
         Ok(())
     }
 
-    pub async fn update_upstream(
-        &self,
-        domain: &str,
-        upstream: &str,
-    ) -> Result<(), Error> {
+    pub async fn update_upstream(&self, domain: &str, upstream: &str) -> Result<(), Error> {
         let _ = self.remove_route(domain).await;
         self.add_route(domain, upstream).await
     }
