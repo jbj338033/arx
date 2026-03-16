@@ -9,7 +9,6 @@ use arx_engine::deploy::DeployEngine;
 
 #[derive(Deserialize)]
 struct JsonRpcRequest {
-    jsonrpc: String,
     id: Option<Value>,
     method: String,
     #[serde(default)]
