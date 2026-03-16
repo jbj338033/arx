@@ -536,10 +536,7 @@ async fn run_doctor() -> Result<(), Error> {
     let mut checks: Vec<(&str, bool, String)> = Vec::new();
 
     let docker_ok = match bollard::Docker::connect_with_local_defaults() {
-        Ok(d) => match d.ping().await {
-            Ok(_) => true,
-            Err(_) => false,
-        },
+        Ok(d) => d.ping().await.is_ok(),
         Err(_) => false,
     };
     checks.push(("docker daemon", docker_ok, if docker_ok { "connected".into() } else { "cannot connect to docker".into() }));
