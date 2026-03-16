@@ -16,6 +16,12 @@ pub struct RateLimiter {
     max_requests: u64,
 }
 
+impl Default for RateLimiter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RateLimiter {
     pub fn new() -> Self {
         let max_requests = std::env::var("ARX_RATE_LIMIT")
