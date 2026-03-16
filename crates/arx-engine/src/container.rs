@@ -38,6 +38,7 @@ impl ContainerManager {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_and_start(
         &self,
         name: &str,
