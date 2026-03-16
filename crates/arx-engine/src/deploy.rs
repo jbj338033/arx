@@ -113,7 +113,7 @@ impl DeployEngine {
                     body
                 };
                 VerificationResult {
-                    health_check: Some(status >= 200 && status < 400),
+                    health_check: Some((200..400).contains(&status)),
                     http_status: Some(status),
                     response_time_ms: Some(start.elapsed().as_millis() as u64),
                     body_preview: Some(preview),
