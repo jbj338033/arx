@@ -11,24 +11,13 @@ pub struct ArxConfig {
     pub resources: ResourceConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BuildConfig {
     pub command: Option<String>,
     pub output: Option<String>,
     pub dockerfile: Option<String>,
     #[serde(default)]
     pub cache_paths: Vec<String>,
-}
-
-impl Default for BuildConfig {
-    fn default() -> Self {
-        Self {
-            command: None,
-            output: None,
-            dockerfile: None,
-            cache_paths: Vec::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
