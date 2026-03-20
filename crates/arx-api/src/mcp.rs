@@ -161,7 +161,10 @@ async fn handle_request(
         })),
 
         "tools/call" => {
-            let tool_name = req.params["name"].as_str().unwrap_or("");
+            let tool_name = req.params["name"]
+                .as_str()
+                .filter(|s| !s.is_empty())
+                .ok_or_else(|| "missing tool name".to_string())?;
             let args = &req.params["arguments"];
             let result = call_tool(pool, tool_name, args).await?;
             Ok(json!({

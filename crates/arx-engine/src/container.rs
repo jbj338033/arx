@@ -61,7 +61,7 @@ impl ContainerManager {
 
         let host_config = HostConfig {
             port_bindings: Some(port_bindings),
-            nano_cpus: cpu.map(|c| c * 1_000_000_000),
+            nano_cpus: cpu,
             memory,
             network_mode: network.map(String::from),
             binds: volumes,
@@ -160,7 +160,12 @@ impl ContainerManager {
             driver: "bridge".to_string(),
             ..Default::default()
         };
-        let _ = self.docker.create_network(config).await;
-        Ok(())
+        match self.docker.create_network(config).await {
+            Ok(_) => Ok(()),
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 409, ..
+            }) => Ok(()),
+            Err(e) => Err(Error::Internal(format!("network create failed: {e}"))),
+        }
     }
 }

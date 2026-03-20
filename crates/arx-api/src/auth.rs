@@ -15,11 +15,16 @@ pub struct AuthenticatedKey {
 }
 
 pub async fn auth_middleware(mut req: Request, next: Next) -> Response {
-    let pool = req
-        .extensions()
-        .get::<SqlitePool>()
-        .expect("SqlitePool missing from extensions")
-        .clone();
+    let pool = match req.extensions().get::<SqlitePool>().cloned() {
+        Some(p) => p,
+        None => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "server misconfigured"})),
+            )
+                .into_response();
+        }
+    };
 
     let token = match extract_token(&req) {
         Ok(t) => t,
@@ -44,9 +49,9 @@ pub async fn auth_middleware(mut req: Request, next: Next) -> Response {
     };
 
     if let Some(ref allowed) = key.allowed_ips {
-        let client_ip = extract_client_ip(&req);
-        if let Some(ip) = client_ip {
-            if !check_ip_allowed(ip, allowed) {
+        match extract_client_ip(&req) {
+            Some(ip) if check_ip_allowed(ip, allowed) => {}
+            _ => {
                 return (
                     StatusCode::FORBIDDEN,
                     Json(serde_json::json!({"error": "ip not allowed"})),

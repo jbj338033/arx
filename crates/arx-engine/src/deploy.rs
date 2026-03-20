@@ -27,11 +27,8 @@ impl DeployEngine {
         env: Vec<String>,
         config: &ArxConfig,
     ) -> Result<DeployResult, Error> {
-        let image_tag = format!(
-            "arx-build-{}-{}",
-            deployment.project_id,
-            &deployment.id[..8]
-        );
+        let short_id = truncate_id(&deployment.id, 8);
+        let image_tag = format!("arx-build-{}-{}", deployment.project_id, short_id);
 
         let dockerfile = config.build.dockerfile.as_deref().unwrap_or("Dockerfile");
 
@@ -52,7 +49,8 @@ impl DeployEngine {
         tracing::info!(deployment_id = %deployment.id, image, "pulling image");
         self.containers.pull_image(image).await?;
 
-        let container_name = format!("arx-{}-{}", deployment.project_id, &deployment.id[..8]);
+        let short_id = truncate_id(&deployment.id, 8);
+        let container_name = format!("arx-{}-{}", deployment.project_id, short_id);
         let network_name = format!("arx-{}", deployment.project_id);
         self.containers.create_network(&network_name).await?;
 
@@ -108,7 +106,11 @@ impl DeployEngine {
                 let status = resp.status().as_u16();
                 let body = resp.text().await.unwrap_or_default();
                 let preview = if body.len() > 200 {
-                    format!("{}...", &body[..200])
+                    let mut end = 200;
+                    while !body.is_char_boundary(end) {
+                        end -= 1;
+                    }
+                    format!("{}...", &body[..end])
                 } else {
                     body
                 };
@@ -143,7 +145,11 @@ pub struct DeployResult {
 }
 
 fn parse_cpu(s: &str) -> Option<i64> {
-    s.parse::<f64>().ok().map(|v| v as i64)
+    s.parse::<f64>().ok().map(|v| (v * 1_000_000_000.0) as i64)
+}
+
+fn truncate_id(id: &str, max: usize) -> &str {
+    &id[..id.len().min(max)]
 }
 
 fn parse_memory(s: &str) -> Option<i64> {

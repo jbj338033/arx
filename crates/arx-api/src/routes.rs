@@ -397,7 +397,7 @@ pub async fn create_api_key(
 
     let raw_key = crate::auth::generate_api_key();
     let key_hash = crate::auth::hash_key(&raw_key);
-    let key_prefix = raw_key[..15].to_string();
+    let key_prefix = raw_key[..raw_key.len().min(15)].to_string();
 
     let expires_at = body
         .ttl_days
@@ -875,7 +875,7 @@ pub async fn create_database(
 
     let db_name = body
         .name
-        .unwrap_or_else(|| format!("db_{}", &project_id[..8]));
+        .unwrap_or_else(|| format!("db_{}", &project_id[..project_id.len().min(8)]));
     let db_manager = arx_engine::database::DatabaseManager::new(&state.engine.containers);
     let info = db_manager
         .provision(&body.engine, &project_id, &db_name)
@@ -1091,7 +1091,7 @@ pub struct DiffQuery {
 pub async fn deployment_diff(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthenticatedKey>,
-    Path(_project_id): Path<String>,
+    Path(project_id): Path<String>,
     axum::extract::Query(query): axum::extract::Query<DiffQuery>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     require_scope(&auth.key, &ApiScope::Read)
@@ -1113,6 +1113,13 @@ pub async fn deployment_diff(
                 Json(json!({"error": format!("to: {e}")})),
             )
         })?;
+
+    if from.project_id != project_id || to.project_id != project_id {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "deployment does not belong to project"})),
+        ));
+    }
 
     let mut changes = Vec::new();
 
