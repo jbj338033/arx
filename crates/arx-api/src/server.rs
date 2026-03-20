@@ -126,7 +126,9 @@ pub async fn run(pool: SqlitePool, host: &str, port: u16) -> Result<(), arx_core
 
     let cleanup_pool = pool.clone();
     tokio::spawn(async move {
-        let _ = arx_core::db::cleanup_idempotency_keys(&cleanup_pool).await;
+        if let Err(e) = arx_core::db::cleanup_idempotency_keys(&cleanup_pool).await {
+            tracing::warn!("idempotency key cleanup failed: {e}");
+        }
     });
 
     let app = create_router(state);
