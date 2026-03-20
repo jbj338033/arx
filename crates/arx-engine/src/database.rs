@@ -54,7 +54,8 @@ impl<'a> DatabaseManager<'a> {
             _ => unreachable!(),
         };
 
-        let container_name = format!("arx-db-{}-{}", project_id, &id[..8]);
+        let short_id = &id[..id.len().min(8)];
+        let container_name = format!("arx-db-{}-{}", project_id, short_id);
         let network_name = format!("arx-{project_id}");
         let volume_path = format!("/var/lib/arx/data/db-{id}");
         let volume_mount = match engine {
