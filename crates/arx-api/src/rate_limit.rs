@@ -57,14 +57,18 @@ pub async fn rate_limit_middleware(req: Request, next: Next) -> Response {
     let window = std::time::Duration::from_secs(60);
 
     let mut windows = limiter.windows.lock().await;
-    let timestamps = windows.entry(key_id).or_default();
 
-    while timestamps
-        .front()
-        .is_some_and(|t| now.duration_since(*t) > window)
-    {
-        timestamps.pop_front();
-    }
+    windows.retain(|_, timestamps| {
+        while timestamps
+            .front()
+            .is_some_and(|t| now.duration_since(*t) > window)
+        {
+            timestamps.pop_front();
+        }
+        !timestamps.is_empty()
+    });
+
+    let timestamps = windows.entry(key_id).or_default();
 
     if timestamps.len() as u64 >= limiter.max_requests {
         let oldest = timestamps.front().unwrap();
