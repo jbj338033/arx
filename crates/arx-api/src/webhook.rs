@@ -63,6 +63,12 @@ pub async fn github_webhook(
         })?;
 
     let secret = std::env::var("ARX_WEBHOOK_SECRET").unwrap_or_default();
+    if secret.is_empty() {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "webhook secret not configured"})),
+        ));
+    }
     if !verify_signature(secret.as_bytes(), &body, signature) {
         return Err((
             StatusCode::UNAUTHORIZED,
@@ -131,6 +137,12 @@ pub async fn gitea_webhook(
         })?;
 
     let secret = std::env::var("ARX_WEBHOOK_SECRET").unwrap_or_default();
+    if secret.is_empty() {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "webhook secret not configured"})),
+        ));
+    }
     if !verify_signature(secret.as_bytes(), &body, signature) {
         return Err((
             StatusCode::UNAUTHORIZED,
