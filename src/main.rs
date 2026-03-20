@@ -441,7 +441,7 @@ async fn ensure_initial_admin_key(pool: &sqlx::SqlitePool) -> Result<(), Error> 
 
     let raw_key = arx_api::auth::generate_api_key();
     let key_hash = arx_api::auth::hash_key(&raw_key);
-    let key_prefix = raw_key[..15].to_string();
+    let key_prefix = raw_key[..raw_key.len().min(15)].to_string();
 
     let api_key = arx_core::model::ApiKey {
         id: uuid::Uuid::new_v4().to_string(),
@@ -471,7 +471,10 @@ async fn ensure_initial_admin_key(pool: &sqlx::SqlitePool) -> Result<(), Error> 
         }
     }
 
-    tracing::info!("initial admin key created (prefix: {}...)", &raw_key[..15]);
+    tracing::info!(
+        "initial admin key created (prefix: {}...)",
+        &raw_key[..raw_key.len().min(15)]
+    );
     Ok(())
 }
 
@@ -504,7 +507,7 @@ async fn run_admin(command: AdminCommands) -> Result<(), Error> {
 
             let raw_key = arx_api::auth::generate_api_key();
             let key_hash = arx_api::auth::hash_key(&raw_key);
-            let key_prefix = raw_key[..15].to_string();
+            let key_prefix = raw_key[..raw_key.len().min(15)].to_string();
 
             let api_key = arx_core::model::ApiKey {
                 id: uuid::Uuid::new_v4().to_string(),
@@ -612,7 +615,14 @@ async fn run_doctor() -> Result<(), Error> {
         } else {
             let msg = failed
                 .iter()
-                .map(|(id, pid, ts)| format!("{} (project: {}, at: {})", &id[..8], &pid[..8], ts))
+                .map(|(id, pid, ts)| {
+                    format!(
+                        "{} (project: {}, at: {})",
+                        &id[..id.len().min(8)],
+                        &pid[..pid.len().min(8)],
+                        ts
+                    )
+                })
                 .collect::<Vec<_>>()
                 .join(", ");
             checks.push(("recent failures", false, msg));
